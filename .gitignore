@@ -1,0 +1,56 @@
+# Environment
+.env
+.env.local
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+.installed.cfg
+MANIFEST
+pip-wheel-metadata/
+
+# Testing / Type checking
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Outputs
+reports/
+*.log
+logs/
+
+# Credentials
+*.json
+!seo_agent/**/*.json
+!tests/**/*.json
+gsc-sa.json
+credentials.json
+token.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# uv / package managers
+.venv
+uv.lock
