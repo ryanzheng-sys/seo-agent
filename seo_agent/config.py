@@ -89,13 +89,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     reports_dir: Path = Path("./reports")
 
-    # Redshift
-    redshift_host: str | None = None
-    redshift_port: int = 5439
-    redshift_db: str | None = None
-    redshift_user: str | None = None
-    redshift_password: str | None = None
-    redshift_schema: str = "marts"
+    # Redash (replaces direct Redshift access)
+    redash_url: str | None = None
+    redash_api_key: str | None = None
 
     # GSC
     gsc_service_account_json: str | None = None
@@ -123,17 +119,6 @@ class Settings(BaseSettings):
     dataforseo_login: str | None = None
     dataforseo_password: str | None = None
     google_search_status_url: str = "https://status.search.google.com/incidents.json"
-
-    @property
-    def redshift_dsn(self) -> str | None:
-        if not all([self.redshift_host, self.redshift_db, self.redshift_user]):
-            return None
-        pw = self.redshift_password or ""
-        return (
-            f"postgresql+psycopg2://{self.redshift_user}:{pw}"
-            f"@{self.redshift_host}:{self.redshift_port}/{self.redshift_db}"
-        )
-
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
@@ -175,7 +160,7 @@ def ensure_reports_dir() -> Path:
 
 # Exposed so callers don't need to pull `os` in
 ENV_KEYS_REQUIRED_BY_MODULE: dict[str, tuple[str, ...]] = {
-    "redshift": ("REDSHIFT_HOST", "REDSHIFT_DB", "REDSHIFT_USER", "REDSHIFT_PASSWORD"),
+    "redash": ("REDASH_URL", "REDASH_API_KEY"),
     "gsc": ("GSC_SERVICE_ACCOUNT_JSON",),
     "jira": ("JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN"),
     "server_logs": ("SERVER_LOG_PATH",),

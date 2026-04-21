@@ -20,7 +20,7 @@ The agent automates **7 investigation categories** requested by the SEO team lea
 
 | # | Category | Data source | Module |
 |---|----------|-------------|--------|
-| 1 | Overall performance monitoring | Redshift (`ga_user_metric`) | `collectors/redshift.py` |
+| 1 | Overall performance monitoring | Redash API (saved `ga_user_metric` query) | `collectors/redash.py` |
 | 2 | SEO deep-dive (page/URL/query + intent) | Google Search Console | `collectors/gsc.py` + `analyzers/intent.py` |
 | 3 | Index & crawl rate | Google Search Console | `collectors/gsc.py` |
 | 4 | Status code / technical health | Server logs | `collectors/server_logs.py` |
@@ -44,7 +44,7 @@ The agent automates **7 investigation categories** requested by the SEO team lea
              ┌─────────▼───┐  ┌─────▼─────┐ ┌────▼──────────┐
              │ Collectors  │  │ Analyzers │ │   Reporter    │
              │             │  │           │ │               │
-             │ • redshift  │  │ • anomaly │ │  Markdown /   │
+             │ • redash    │  │ • anomaly │ │  Markdown /   │
              │ • gsc       │  │ • corr    │ │  Confluence   │
              │ • jira      │  │ • intent  │ │  output       │
              │ • server    │  │           │ │               │
@@ -75,7 +75,7 @@ uv sync
 pip install -e .
 
 cp .env.example .env
-# Fill in GSC credentials, Redshift connection, Jira token, etc.
+# Fill in GSC credentials, Redash URL + API key, Jira token, etc.
 ```
 
 ## Usage
@@ -119,7 +119,7 @@ seo_agent/
 │   ├── investigator.py   # Orchestrates the 7 investigation modules
 │   └── reporter.py       # Markdown report generation
 ├── collectors/
-│   ├── redshift.py       # GA metrics from Redshift
+│   ├── redash.py         # GA metrics via Redash API (saved queries)
 │   ├── gsc.py            # Google Search Console
 │   ├── jira.py           # Release / deploy correlation
 │   ├── server_logs.py    # Status code analysis

@@ -53,7 +53,7 @@ def detect_uv_anomalies(
 
     findings.append(
         Finding(
-            module="redshift",
+            module="redash",
             category="overall_uv",
             title=f"Organic UV WoW change: {delta.delta_pct:+.1f}%",
             description=(
@@ -106,7 +106,7 @@ def _findings_by_dimension(
             continue
         findings.append(
             Finding(
-                module="redshift",
+                module="redash",
                 category=f"uv_by_{dimension}",
                 title=f"{dimension}={key}: {delta.delta_pct:+.1f}% UV",
                 description=(

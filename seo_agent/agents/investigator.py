@@ -17,7 +17,7 @@ from seo_agent.collectors import CollectionWindow
 from seo_agent.collectors.external import ExternalFactorsCollector
 from seo_agent.collectors.gsc import GSCBundle, GSCCollector
 from seo_agent.collectors.jira import JiraCollector
-from seo_agent.collectors.redshift import RedshiftCollector
+from seo_agent.collectors.redash import RedashCollector
 from seo_agent.collectors.server_logs import ServerLogCollector
 from seo_agent.collectors.ssr_check import SSRCheckCollector
 from seo_agent.config import DomainConfig
@@ -31,7 +31,7 @@ from seo_agent.models.investigation import (
 
 logger = logging.getLogger(__name__)
 
-ALL_MODULES = ("redshift", "gsc", "crawl", "server_logs", "jira", "ssr", "external")
+ALL_MODULES = ("redash", "gsc", "crawl", "server_logs", "jira", "ssr", "external")
 
 
 class Investigator:
@@ -45,14 +45,14 @@ class Investigator:
     def __init__(
         self,
         *,
-        redshift: RedshiftCollector | None = None,
+        redash: RedashCollector | None = None,
         gsc: GSCCollector | None = None,
         jira: JiraCollector | None = None,
         server_logs: ServerLogCollector | None = None,
         ssr: SSRCheckCollector | None = None,
         external: ExternalFactorsCollector | None = None,
     ) -> None:
-        self.redshift = redshift or RedshiftCollector()
+        self.redash = redash or RedashCollector()
         self.gsc = gsc or GSCCollector()
         self.jira = jira or JiraCollector()
         self.server_logs = server_logs or ServerLogCollector()
@@ -89,10 +89,10 @@ class Investigator:
         # --- Category 1: overall performance -----------------------------
         uv_current: list = []
         uv_previous: list = []
-        if "redshift" in modules:
+        if "redash" in modules:
             uv_current, uv_previous = self._run(
-                "redshift",
-                lambda: self._collect_redshift(domain, window),
+                "redash",
+                lambda: self._collect_redash(domain, window),
                 report,
             ) or ([], [])
             report.modules[-1].findings.extend(
@@ -176,14 +176,14 @@ class Investigator:
             )
             return None
 
-    # Collect both current + previous windows for Redshift so the anomaly
+    # Collect both current + previous windows via Redash so the anomaly
     # analyzer can compute WoW directly.
-    def _collect_redshift(
+    def _collect_redash(
         self, domain: DomainConfig, window: CollectionWindow
     ) -> tuple[list, list]:
-        current = self.redshift.collect(domain, window)
+        current = self.redash.collect(domain, window)
         prev_window = CollectionWindow(start=window.previous_start, end=window.previous_end)
-        previous = self.redshift.collect(domain, prev_window)
+        previous = self.redash.collect(domain, prev_window)
         return current, previous
 
     def _findings_from_gsc(self, bundle: GSCBundle, report: InvestigationReport) -> None:
