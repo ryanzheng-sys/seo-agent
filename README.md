@@ -78,6 +78,39 @@ cp .env.example .env
 # Fill in GSC credentials, Redash URL + API key, Jira token, etc.
 ```
 
+## Creating Redash queries (one-time, ~5 min)
+
+The Redash instance (`https://redash.visable.com/`) lives on the internal
+network and is **not reachable from API clients outside the VPN**. Because
+of that we don't ship auto-created queries — instead, the SQL lives in
+[`sql/`](./sql/) and you create the queries manually in the UI once, then
+paste their IDs into `.env`.
+
+Do this twice — once for UV, once for AB:
+
+1. Open <https://redash.visable.com/> → **Create** → **New Query**.
+2. Select the DWH / Redshift data source.
+3. Paste the SQL from the file below.
+4. Click the **gear icon** (⚙) on each `{{ start_date }}` / `{{ end_date }}`
+   placeholder and add a parameter:
+   - **Add Parameter** → Type: **Date**, Name: `start_date`
+   - **Add Parameter** → Type: **Date**, Name: `end_date`
+
+   The names must match exactly — the collector passes them through as
+   `{"parameters": {"start_date": "...", "end_date": "..."}}`.
+5. Click **Execute** to verify, then **Save** with the suggested title.
+6. Copy the query ID from the URL — e.g. `…/queries/1234/source` → `1234` —
+   and paste it into `.env`.
+
+| # | SQL file | Suggested Redash title | `.env` variable |
+|---|----------|------------------------|------------------|
+| 1 | [`sql/01_daily_uv_by_domain_channel.sql`](./sql/01_daily_uv_by_domain_channel.sql) | `[SEO Agent] Daily UV by Domain, Channel, Device` | `REDASH_UV_QUERY_ID` |
+| 2 | [`sql/02_daily_ab_by_domain_channel.sql`](./sql/02_daily_ab_by_domain_channel.sql) | `[SEO Agent] Daily AB by Domain, Channel, Device` | `REDASH_AB_QUERY_ID` |
+
+The expected result schema for each query is documented in the SQL file
+header and in the corresponding method docstring on `RedashCollector`
+(`seo_agent/collectors/redash.py`).
+
 ## Usage
 
 ```bash

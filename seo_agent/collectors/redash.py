@@ -34,13 +34,21 @@ class RedashCollector(Collector):
 
     Configuration (via environment / `.env`):
         REDASH_URL       Base URL of the Redash instance, e.g.
-                         ``https://reporting.visable.com``
+                         ``https://redash.visable.com``
         REDASH_API_KEY   User or query API key with permission to run the
                          required saved queries.
 
-    Saved queries are referenced by ID. Defaults can be overridden with:
-        REDASH_UV_QUERY_ID   Saved query for GA UV metrics (Category 1)
-        REDASH_AB_QUERY_ID   Saved query for AB (activation) metrics
+    Saved queries are referenced by ID. The SQL for each query lives in
+    ``sql/`` at the repo root and **must be created manually** in the
+    Redash UI (the instance is on the internal network). See the
+    "Creating Redash queries" section in the README for the step-by-step.
+
+    Environment variables:
+        REDASH_UV_QUERY_ID   Query ID for ``sql/01_daily_uv_by_domain_channel.sql``
+        REDASH_AB_QUERY_ID   Query ID for ``sql/02_daily_ab_by_domain_channel.sql``
+
+    Each query must expose two Date parameters named exactly ``start_date``
+    and ``end_date`` — this collector passes them through verbatim.
     """
 
     name = "redash"
@@ -93,7 +101,21 @@ class RedashCollector(Collector):
     def collect_uv_metrics(
         self, domain: str, window: CollectionWindow
     ) -> list[UVMetrics]:
-        """Pull GA UV metrics for ``domain`` over ``window``."""
+        """Pull GA UV metrics for ``domain`` over ``window``.
+
+        Backed by the saved Redash query whose SQL lives at
+        ``sql/01_daily_uv_by_domain_channel.sql``. The query returns
+        **all** wlw/europages hostnames; filtering to ``domain`` is done
+        client-side by :func:`_row_to_uv_metrics` consumers / analyzers.
+
+        Expected result columns:
+            date       DATE     — event date
+            hostname   VARCHAR  — e.g. ``www.europages.fr``
+            platform   VARCHAR  — ``wlw`` or ``ep``
+            channel    VARCHAR  — GA channel grouping (never NULL)
+            device     VARCHAR  — desktop / mobile / tablet
+            uv         BIGINT   — ``COUNT(DISTINCT visitor_sk)``
+        """
 
         if not self.is_ready():
             logger.warning(
@@ -113,9 +135,8 @@ class RedashCollector(Collector):
         rows = self._run_saved_query(
             query_id,
             parameters={
-                "hostname": domain,
-                "start": window.start.isoformat(),
-                "end": window.end.isoformat(),
+                "start_date": window.start.isoformat(),
+                "end_date": window.end.isoformat(),
             },
         )
         logger.info(
@@ -130,10 +151,25 @@ class RedashCollector(Collector):
     def collect_ab_metrics(
         self, domain: str, window: CollectionWindow
     ) -> list[dict[str, Any]]:
-        """Pull AB (activation / conversion) metrics for ``domain``.
+        """Pull AB (Active Buyer) metrics for ``domain``.
 
-        Returns raw dict rows — downstream analyzers handle their own
-        typing until an AB metric model is introduced.
+        Backed by the saved Redash query whose SQL lives at
+        ``sql/02_daily_ab_by_domain_channel.sql``. The query returns
+        **all** wlw/europages hostnames; filtering to ``domain`` is done
+        client-side by downstream analyzers.
+
+        Returns raw dict rows — no typed model exists yet for AB metrics.
+
+        Expected result columns:
+            date       DATE     — event date
+            hostname   VARCHAR  — e.g. ``www.europages.fr``
+            platform   VARCHAR  — ``wlw`` or ``ep`` (from v_active_buyers)
+            channel    VARCHAR  — GA channel grouping (never NULL)
+            device     VARCHAR  — desktop / mobile / tablet
+            ab         BIGINT   — distinct Active Buyers
+            qdr_ab     BIGINT   — ABs with a Quality Direct Request
+            rfq_ab     BIGINT   — ABs with a verified RFQ
+            pc_ab      BIGINT   — ABs with a Positive Connection
         """
 
         if not self.is_ready():
@@ -154,9 +190,8 @@ class RedashCollector(Collector):
         rows = self._run_saved_query(
             query_id,
             parameters={
-                "hostname": domain,
-                "start": window.start.isoformat(),
-                "end": window.end.isoformat(),
+                "start_date": window.start.isoformat(),
+                "end_date": window.end.isoformat(),
             },
         )
         logger.info(
@@ -288,7 +323,7 @@ def _row_to_uv_metrics(r: dict[str, Any]) -> UVMetrics:
         channel=_safe_enum(Channel, r.get("channel") or r.get("channel_group"), Channel.OTHER),
         device=_safe_enum(Device, r.get("device") or r.get("device_category"), None),
         landing_page=r.get("landing_page"),
-        total_uv=int(r.get("total_uv") or r.get("users") or 0),
+        total_uv=int(r.get("total_uv") or r.get("uv") or r.get("users") or 0),
         sessions=int(r.get("sessions") or 0),
         engaged_sessions=int(r.get("engaged_sessions") or 0),
         engagement_rate=float(r.get("engagement_rate") or 0.0),
